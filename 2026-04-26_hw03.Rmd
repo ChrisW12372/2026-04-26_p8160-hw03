@@ -1,5 +1,6 @@
 ---
 title: "2026-04-26_hw03"
+author: "Chris"
 date: "2026-04-26"
 output: 
   html_document:
@@ -10,6 +11,7 @@ output:
     css: style.css
 ---
 
+The project is on GitHub: https://github.com/ChrisW12372/2026-04-26_p8160-hw03.git
 
 ```{r message=FALSE, warning=FALSE}
 library(tidyverse)
@@ -145,6 +147,251 @@ ci_table$Symmetric_about_r_hat <- abs(ci_table$Left_distance - ci_table$Right_di
 
 ci_table
 ```
+
+
+# Problem Two
+
+## Part I
+
+```{r}
+blue <- c(4,69,87,35,39,79,31,79,65,95,68,
+          62,70,80,84,79,66,75,59,77,36,86,
+          39,85,74,72,69,85,85,72)
+
+red <- c(62,80,82,83,0,81,28,69,48,90,63,
+         77,0,55,83,85,54,72,58,68,88,83,78,
+         30,58,45,78,64,87,65)
+
+acui <- data.frame(
+  str = c(rep(0, 20), rep(1, 10)),
+  red = red,
+  blue = blue
+)
+
+# paired part
+d_paired <- mean(acui$blue[acui$str == 0] - acui$red[acui$str == 0])
+
+# two-sample part
+d_twosample <- mean(acui$blue[acui$str == 1]) -
+  mean(acui$red[acui$str == 1])
+
+# combined estimator
+delta_hat <- (20 / 30) * d_paired + (10 / 30) * d_twosample
+
+d_paired
+d_twosample
+delta_hat
+```
+
+
+## Part II
+
+```{r}
+paired <- acui[acui$str == 0, ]
+single <- acui[acui$str == 1, ]
+
+delta_paired <- mean(paired$blue - paired$red)
+delta_single <- mean(single$blue) - mean(single$red)
+
+```
+
+
+```{r}
+set.seed(202604)
+
+B <- 1000
+
+n_paired <- nrow(paired)
+n_single <- nrow(single)
+
+delta_star <- numeric(B)
+
+for (b in 1:B) {
+  # paired part
+  idx_p <- sample(1:n_paired, size = n_paired, replace = TRUE)
+  paired_star <- paired[idx_p, ]
+  
+  delta_paired_star <- mean(paired_star$blue - paired_star$red)
+  
+  # single-eye part
+  blue_single_star <- sample(single$blue, size = n_single, replace = TRUE)
+  red_single_star  <- sample(single$red,  size = n_single, replace = TRUE)
+  
+  delta_single_star <- mean(blue_single_star) - mean(red_single_star)
+  
+  # combined estimator
+  delta_star[b] <- (20 / 30) * delta_paired_star +
+    (10 / 30) * delta_single_star
+}
+```
+
+
+```{r}
+ci_percentile <- quantile(delta_star, probs = c(0.025, 0.975))
+ci_percentile
+```
+
+
+```{r}
+q_delta <- quantile(delta_star, probs = c(0.025, 0.975))
+ci_basic <- c(
+  2 * delta_hat - q_delta[2],
+  2 * delta_hat - q_delta[1])
+ci_basic
+```
+
+
+## Part III
+
+```{r}
+set.seed(202604)
+
+n <- length(blue)
+
+delta_wrong_star <- numeric(B)
+
+delta_wrong_hat <- mean(blue) - mean(red)
+
+for (b in 1:B) {
+  blue_star_wrong <- sample(blue, size = n, replace = TRUE)
+  red_star_wrong  <- sample(red,  size = n, replace = TRUE)
+  
+  delta_wrong_star[b] <- mean(blue_star_wrong) - mean(red_star_wrong)
+}
+
+# Percentile CI
+ci_wrong_percentile <- quantile(delta_wrong_star, probs = c(0.025, 0.975))
+
+# Basic CI
+q_wrong <- quantile(delta_wrong_star, probs = c(0.025, 0.975))
+
+ci_wrong_basic <- c(
+  2 * delta_wrong_hat - q_wrong[2],
+  2 * delta_wrong_hat - q_wrong[1]
+)
+
+ci_wrong_percentile
+ci_wrong_basic
+```
+
+
+```{r}
+# correct CIs from part (b)
+ci_correct_percentile <- c(-5.670833, 12.200833)
+ci_correct_basic <- c(-6.06750, 11.80417)
+
+# widths
+width_correct_percentile <- diff(ci_correct_percentile)
+width_correct_basic <- diff(ci_correct_basic)
+
+width_wrong_percentile <- diff(ci_wrong_percentile)
+width_wrong_basic <- diff(ci_wrong_basic)
+
+width_correct_percentile
+width_wrong_percentile
+
+width_correct_basic
+width_wrong_basic
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

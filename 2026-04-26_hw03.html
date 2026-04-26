@@ -9,6 +9,7 @@
 <meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
 
 
+<meta name="author" content="Chris" />
 
 <meta name="date" content="2026-04-26" />
 
@@ -1498,11 +1499,13 @@ border-radius: 0px;
 
 
 <h1 class="title toc-ignore">2026-04-26_hw03</h1>
+<h4 class="author">Chris</h4>
 <h4 class="date">2026-04-26</h4>
 
 </div>
 
 
+<p>The project is on GitHub: <a href="https://github.com/ChrisW12372/2026-04-26_p8160-hw03.git" class="uri">https://github.com/ChrisW12372/2026-04-26_p8160-hw03.git</a></p>
 <pre class="r"><code>library(tidyverse)
 library(bootstrap)
 library(MASS)
@@ -1630,6 +1633,143 @@ ci_table</code></pre>
 ## 2     0.2656034      0.2656033                  TRUE
 ## 3     0.1828263      0.3234943                 FALSE
 ## 4     0.3234943      0.1828263                 FALSE</code></pre>
+</div>
+</div>
+<div id="problem-two" class="section level1" number="2">
+<h1><span class="header-section-number">2</span> Problem Two</h1>
+<div id="part-i-1" class="section level2" number="2.1">
+<h2><span class="header-section-number">2.1</span> Part I</h2>
+<pre class="r"><code>blue &lt;- c(4,69,87,35,39,79,31,79,65,95,68,
+          62,70,80,84,79,66,75,59,77,36,86,
+          39,85,74,72,69,85,85,72)
+
+red &lt;- c(62,80,82,83,0,81,28,69,48,90,63,
+         77,0,55,83,85,54,72,58,68,88,83,78,
+         30,58,45,78,64,87,65)
+
+acui &lt;- data.frame(
+  str = c(rep(0, 20), rep(1, 10)),
+  red = red,
+  blue = blue
+)
+
+# paired part
+d_paired &lt;- mean(acui$blue[acui$str == 0] - acui$red[acui$str == 0])
+
+# two-sample part
+d_twosample &lt;- mean(acui$blue[acui$str == 1]) -
+  mean(acui$red[acui$str == 1])
+
+# combined estimator
+delta_hat &lt;- (20 / 30) * d_paired + (10 / 30) * d_twosample
+
+d_paired</code></pre>
+<pre><code>## [1] 3.25</code></pre>
+<pre class="r"><code>d_twosample</code></pre>
+<pre><code>## [1] 2.7</code></pre>
+<pre class="r"><code>delta_hat</code></pre>
+<pre><code>## [1] 3.066667</code></pre>
+</div>
+<div id="part-ii-1" class="section level2" number="2.2">
+<h2><span class="header-section-number">2.2</span> Part II</h2>
+<pre class="r"><code>paired &lt;- acui[acui$str == 0, ]
+single &lt;- acui[acui$str == 1, ]
+
+delta_paired &lt;- mean(paired$blue - paired$red)
+delta_single &lt;- mean(single$blue) - mean(single$red)</code></pre>
+<pre class="r"><code>set.seed(202604)
+
+B &lt;- 1000
+
+n_paired &lt;- nrow(paired)
+n_single &lt;- nrow(single)
+
+delta_star &lt;- numeric(B)
+
+for (b in 1:B) {
+  # paired part
+  idx_p &lt;- sample(1:n_paired, size = n_paired, replace = TRUE)
+  paired_star &lt;- paired[idx_p, ]
+  
+  delta_paired_star &lt;- mean(paired_star$blue - paired_star$red)
+  
+  # single-eye part
+  blue_single_star &lt;- sample(single$blue, size = n_single, replace = TRUE)
+  red_single_star  &lt;- sample(single$red,  size = n_single, replace = TRUE)
+  
+  delta_single_star &lt;- mean(blue_single_star) - mean(red_single_star)
+  
+  # combined estimator
+  delta_star[b] &lt;- (20 / 30) * delta_paired_star +
+    (10 / 30) * delta_single_star
+}</code></pre>
+<pre class="r"><code>ci_percentile &lt;- quantile(delta_star, probs = c(0.025, 0.975))
+ci_percentile</code></pre>
+<pre><code>##      2.5%     97.5% 
+## -5.670833 12.200833</code></pre>
+<pre class="r"><code>q_delta &lt;- quantile(delta_star, probs = c(0.025, 0.975))
+ci_basic &lt;- c(
+  2 * delta_hat - q_delta[2],
+  2 * delta_hat - q_delta[1])
+ci_basic</code></pre>
+<pre><code>##    97.5%     2.5% 
+## -6.06750 11.80417</code></pre>
+</div>
+<div id="part-iii-1" class="section level2" number="2.3">
+<h2><span class="header-section-number">2.3</span> Part III</h2>
+<pre class="r"><code>set.seed(202604)
+
+n &lt;- length(blue)
+
+delta_wrong_star &lt;- numeric(B)
+
+delta_wrong_hat &lt;- mean(blue) - mean(red)
+
+for (b in 1:B) {
+  blue_star_wrong &lt;- sample(blue, size = n, replace = TRUE)
+  red_star_wrong  &lt;- sample(red,  size = n, replace = TRUE)
+  
+  delta_wrong_star[b] &lt;- mean(blue_star_wrong) - mean(red_star_wrong)
+}
+
+# Percentile CI
+ci_wrong_percentile &lt;- quantile(delta_wrong_star, probs = c(0.025, 0.975))
+
+# Basic CI
+q_wrong &lt;- quantile(delta_wrong_star, probs = c(0.025, 0.975))
+
+ci_wrong_basic &lt;- c(
+  2 * delta_wrong_hat - q_wrong[2],
+  2 * delta_wrong_hat - q_wrong[1]
+)
+
+ci_wrong_percentile</code></pre>
+<pre><code>##     2.5%    97.5% 
+## -7.70500 14.63417</code></pre>
+<pre class="r"><code>ci_wrong_basic</code></pre>
+<pre><code>##     97.5%      2.5% 
+## -8.500833 13.838333</code></pre>
+<pre class="r"><code># correct CIs from part (b)
+ci_correct_percentile &lt;- c(-5.670833, 12.200833)
+ci_correct_basic &lt;- c(-6.06750, 11.80417)
+
+# widths
+width_correct_percentile &lt;- diff(ci_correct_percentile)
+width_correct_basic &lt;- diff(ci_correct_basic)
+
+width_wrong_percentile &lt;- diff(ci_wrong_percentile)
+width_wrong_basic &lt;- diff(ci_wrong_basic)
+
+width_correct_percentile</code></pre>
+<pre><code>## [1] 17.87167</code></pre>
+<pre class="r"><code>width_wrong_percentile</code></pre>
+<pre><code>##    97.5% 
+## 22.33917</code></pre>
+<pre class="r"><code>width_correct_basic</code></pre>
+<pre><code>## [1] 17.87167</code></pre>
+<pre class="r"><code>width_wrong_basic</code></pre>
+<pre><code>##     2.5% 
+## 22.33917</code></pre>
 </div>
 </div>
 
