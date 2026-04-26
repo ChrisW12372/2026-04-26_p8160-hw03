@@ -1,0 +1,172 @@
+---
+title: "2026-04-26_hw03"
+date: "2026-04-26"
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+    number_sections: true
+    theme: cosmo
+    css: style.css
+---
+
+
+```{r message=FALSE, warning=FALSE}
+library(tidyverse)
+library(bootstrap)
+library(MASS)
+library(boot)
+
+set.seed(202604)
+```
+
+
+# Problem One
+
+```{r}
+data("law")
+```
+
+
+## Part I
+
+```{r}
+r_hat_q1 <- cor(law$LSAT, law$GPA)
+r_hat_q1
+```
+
+
+```{r}
+z_hat_q1 <- 0.5 * log((1 + r_hat_q1) / (1 - r_hat_q1))
+z_hat_q1
+```
+
+
+```{r}
+n <- nrow(law)
+se_z <- 1 / sqrt(n - 3)
+
+# 95% CI on z scale
+z_lower <- z_hat_q1 - qnorm(0.975) * se_z
+z_upper <- z_hat_q1 + qnorm(0.975) * se_z
+
+# back-transform to correlation scale
+ci_rho <- tanh(c(z_lower, z_upper))
+```
+
+
+```{r}
+r_hat_q1
+z_hat_q1
+se_z
+ci_rho
+```
+
+
+## Part II
+
+### Bootstrap
+
+```{r}
+set.seed(202604)
+
+B <- 1000
+r_star <- numeric(B)
+
+for(b in 1:B){
+  idx <- sample(1:n, size = n, replace = TRUE)
+  law_star <- law[idx, ]
+  
+  r_star[b] <- cor(law_star$LSAT, law_star$GPA)
+}
+
+se_B <- sd(r_star)
+se_B
+```
+
+
+### Confidence Interval
+
+```{r}
+set.seed(202604)
+alpha <- 0.05
+z_crit <- qnorm(1 - alpha / 2)
+
+# a) standard normal bootstrap CI
+ci_normal_boot <- c(
+  r_hat_q1 - z_crit * se_B,
+  r_hat_q1 + z_crit * se_B
+)
+
+# b) corrected percentile CI
+q_025 <- quantile(r_star, probs = 0.025)
+q_975 <- quantile(r_star, probs = 0.975)
+
+ci_corrected_percentile <- c(
+  2 * r_hat_q1 - q_975,
+  2 * r_hat_q1 - q_025
+)
+
+# c) percentile CI
+ci_percentile <- c(
+  q_025,
+  q_975
+)
+
+ci_normal_boot
+ci_corrected_percentile
+ci_percentile
+```
+
+
+## Part III
+
+```{r}
+r_hat <- 0.7763745
+rho_pop <- 0.776
+
+ci_table <- data.frame(
+  Method = c(
+    "Fisher z normal approximation",
+    "Standard normal bootstrap",
+    "Corrected percentile bootstrap",
+    "Percentile bootstrap"
+  ),
+  Lower = c(0.4385108, 0.5107711, 0.5935482, 0.4528802),
+  Upper = c(0.9219648, 1.0419778, 1.0998688, 0.9592008)
+)
+
+ci_table$Contains_rho_pop <- with(ci_table, Lower <= rho_pop & Upper >= rho_pop)
+
+ci_table$Left_distance <- r_hat - ci_table$Lower
+ci_table$Right_distance <- ci_table$Upper - r_hat
+
+ci_table$Symmetric_about_r_hat <- abs(ci_table$Left_distance - ci_table$Right_distance) < 0.01
+
+ci_table
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
