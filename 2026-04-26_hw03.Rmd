@@ -18,17 +18,18 @@ library(tidyverse)
 library(bootstrap)
 library(MASS)
 library(boot)
+library(glmnet)
+library(tidymodels)
 
 set.seed(202604)
 ```
 
 
-# Problem One
+# Problem 1
 
 ```{r}
 data("law")
 ```
-
 
 ## Part I
 
@@ -149,7 +150,7 @@ ci_table
 ```
 
 
-# Problem Two
+# Problem 2
 
 ## Part I
 
@@ -296,14 +297,145 @@ width_wrong_basic
 
 
 
+# Problem 3
+
+```{r}
+data("Boston")
+set.seed(42) 
+idx <- sample(nrow(Boston), size = floor(0.8 * nrow(Boston)))
+
+train <- Boston[idx, ]
+test <- Boston[-idx, ]
+
+nrow(train)
+nrow(test)
+```
 
 
+# Problem 4.1
+
+```{r}
+X_train <- model.matrix(medv ~ ., train)[, -1]
+y_train <- train$medv
+
+set.seed(42)
+cv_fit <- cv.glmnet(
+  X_train,
+  y_train,
+  alpha = 1,
+  nfolds = 5
+)
+
+cv_df <- data.frame(
+  lambda = cv_fit$lambda,
+  log_lambda = log(cv_fit$lambda),
+  mse = cv_fit$cvm
+)
 
 
+cv_df <- cv_df[order(cv_df$log_lambda), ]
+
+plot(
+  cv_df$log_lambda,
+  cv_df$mse,
+  type = "l",
+  lwd = 2,
+  xlab = expression(log(lambda)),
+  ylab = "Cross-validated MSE",
+  main = "5-fold CV Curve for LASSO"
+)
+
+points(
+  cv_df$log_lambda,
+  cv_df$mse,
+  pch = 19,
+  cex = 0.6
+)
+
+abline(v = log(cv_fit$lambda.min), lty = 2)
+abline(v = log(cv_fit$lambda.1se), lty = 3)
+
+legend(
+  "topleft",
+  legend = c(expression(lambda[min]), expression(lambda["1se"])),
+  lty = c(2, 3),
+  bty = "n"
+)
+
+lambda_min <- cv_fit$lambda.min
+lambda_1se <- cv_fit$lambda.1se
+
+lambda_min
+lambda_1se
+```
 
 
+```{r}
+coef_min <- coef(cv_fit, s = "lambda.min")
+
+selected <- coef_min[coef_min[, 1] != 0, , drop = FALSE]
+selected_vars <- selected[rownames(selected) != "(Intercept)", , drop = FALSE]
+
+selected_vars
+
+# test MSE
+X_test <- model.matrix(medv ~ ., test)[, -1]
+y_test <- test$medv
+
+pred_test <- predict(cv_fit, newx = X_test, s = "lambda.min")
+
+test_mse <- mean((y_test - as.numeric(pred_test))^2)
+test_mse
+```
 
 
+# Problem 4.2
+
+```{r}
+set.seed(42) 
+# In order to keep the comparability with problem 3 and 4.1, the seed was set as 42.
+
+B <- 500
+
+n_train <- nrow(train)
+n_test <- nrow(test)
+
+pred_mat <- matrix(NA, nrow = n_test, ncol = B)
+
+for (b in 1:B) {
+  idx_boot <- sample(1:n_train, size = n_train, replace = TRUE)
+  boot_train <- train[idx_boot, ]
+  
+  X_boot <- model.matrix(medv ~ ., boot_train)[, -1]
+  y_boot <- boot_train$medv
+  
+  cv_boot <- cv.glmnet(
+    X_boot,
+    y_boot,
+    alpha = 1,
+    nfolds = 5
+  )
+  
+  lambda_boot <- cv_boot$lambda.min
+  
+  fit_boot <- glmnet(
+    X_boot,
+    y_boot,
+    alpha = 1,
+    lambda = lambda_boot
+  )
+  
+  pred_mat[, b] <- as.numeric(
+    predict(fit_boot, newx = X_test)
+  )
+}
+
+y_smooth <- rowMeans(pred_mat)
+
+mse_smooth <- mean((y_test - y_smooth)^2)
+
+mse_smooth
+```
 
 
 
